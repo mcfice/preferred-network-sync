@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+# name of the preferred wifi connection (as in NetworkManager)
+PREFERRED=$1
+
+if [ $# -gt 1 ] && [ $2 = '-v' ]; then
+    DEBUG=true
+else
+    DEBUG=false
+fi
+
+dbg() {
+    if [ $DEBUG = true ]; then
+        echo "$1"
+    fi
+}
+
+if [ $# "-gt" 2 ] && [ $3 = '-kde' ]; then
+    dbg "Killing all kdeconnectd processes..."
+    
+    # Check if any kdeconnectd processes were found and killed
+    if killall kdeconnectd 2>/dev/null; then
+        echo "Successfully killed old kdeconnectd processes."
+    else
+        echo "No running kdeconnectd processes found to kill (or kill failed)."
+    fi
+    
+    # Check if the refresh command executes successfully
+    if kdeconnect-cli --refresh 2>/dev/null; then
+        echo "KDE Connect refresh signal sent successfully!"
+    else
+        echo "ERROR: Failed to execute KDE Connect refresh."
+    fi
+fi
+
+# 1. CHECK IF ALREADY CONNECTED
+if ! nmcli -g NAME con show --active | grep -Fxq "$PREFERRED"; then
+    
+    dbg "Not connected to $PREFERRED. Checking if available..."
+
+    # 2. CHECK IF AVAILABLE IN RANGE
+    if nmcli -g SSID device wifi list | grep -Fxq "$PREFERRED"; then
+        
+        dbg "$PREFERRED is available. Attempting to connect..."
+        
+        # 3. ATTEMPT TO CONNECT
+        if nmcli c u "$PREFERRED"; then
+            dbg "Connection successful!"
+            REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
+            if [ -n "$REAL_USER" ]; then 
+                zenity --info --title="Network" --text="Connected to $PREFERRED" --timeout=1
+                runuser -l "$REAL_USER" -c "kdeconnect-cli --refresh"
+            fi
+            
+        else
+            dbg "Connection attempt failed for unknown reason."
+            REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
+            if [ -n "$REAL_USER" ]; then 
+                zenity --warning --title="Network" --text="Failed to connect to $PREFERRED" --timeout=10
+            fi
+
+        fi
+    else
+        dbg "$PREFERRED not in range. Doing nothing."
+
+        REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
+        if [ -n "$REAL_USER" ]; then 
+            zenity --warning --title="Network" --text="$PREFERRED is not in range" --timeout=2
+        fi
+
+    fi
+else
+    dbg "Already connected to $PREFERRED. Doing nothing."
+
+    REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
+    if [ -n "$REAL_USER" ]; then 
+        zenity --warning --title="Network" --text="Already connected to $PREFERRED" --timeout=1
+    fi
+
+fi
+
+sleep 1

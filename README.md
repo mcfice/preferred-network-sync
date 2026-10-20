@@ -4,6 +4,8 @@ A quick-and-dirty bash script I made to automate connecting to my preferred Wi-F
 
 I have it set to a keyboard shortcut so I can easily connect to my mobile hotspot when I activate it.
 
+This is very incredibly specific to my usecase ¯\_(ツ)_/¯
+
 ### Workings:
 * Checks (using `nmcli`) if connected to the set network and only if not attempts to connect
 * Displays results as a graphical window (using `zenity`)

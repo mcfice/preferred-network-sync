@@ -1,0 +1,11 @@
+# Ignore local environment or configuration files
+.env
+config.local
+
+# Ignore text logs you might create while testing
+*.log
+test_output.txt
+
+# OS-generated files
+.DS_Store
+Thumbs.db
