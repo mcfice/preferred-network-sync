@@ -3,7 +3,7 @@
 # name of the preferred wifi connection (as in NetworkManager)
 PREFERRED=$1
 
-if [ $# -gt 1 ] && [ $2 = '-v' ]; then
+if [ $# -gt 1 ] && ([ $2 = '-v' ] || [ $3 = '-v' ]); then
     DEBUG=true
 else
     DEBUG=false
@@ -15,7 +15,7 @@ dbg() {
     fi
 }
 
-if [ $# "-gt" 2 ] && [ $3 = '-kde' ]; then
+if [ $# "-gt" 2 ] && ([ $2 = '-kde' ] || [ $3 = '-kde' ]); then
     dbg "Killing all kdeconnectd processes..."
     
     # Check if any kdeconnectd processes were found and killed
