@@ -1,35 +1,32 @@
-#!/usr/bin/env bash 
+#!/usr/bin/env bash
 
 # name of the preferred wifi connection (as in NetworkManager)
 PREFERRED=$1
 
-if [ $# -gt 1 ] && ([ $2 = '-v' ] || [ $3 = '-v' ]); then
+DEBUG=false
+if (( $# > 1 )) && { [ "$2" = '-v' ] || [ "${3:-}" = '-v' ]; }; then
     DEBUG=true
-else
-    DEBUG=false
 fi
 
 dbg() {
-    if [ $DEBUG = true ]; then
+    if [ "$DEBUG" = true ]; then
         echo "$1"
     fi
 }
 
-if [ $# "-gt" 2 ] && ([ $2 = '-kde' ] || [ $3 = '-kde' ]); then
+if (( $# > 1 )) && { [ "$2" = '-kde' ] || [ "${3:-}" = '-kde' ]; }; then
     dbg "Killing all kdeconnectd processes..."
-    
-    # Check if any kdeconnectd processes were found and killed
+
     if killall kdeconnectd 2>/dev/null; then
-        echo "Successfully killed old kdeconnectd processes."
+        dbg "Successfully killed old kdeconnectd processes."
     else
-        echo "No running kdeconnectd processes found to kill (or kill failed)."
+        dbg "No running kdeconnectd processes found to kill (or kill failed)."
     fi
-    
-    # Check if the refresh command executes successfully
+
     if kdeconnect-cli --refresh 2>/dev/null; then
-        echo "KDE Connect refresh signal sent successfully!"
+        dbg "KDE Connect refresh signal sent successfully!"
     else
-        echo "ERROR: Failed to execute KDE Connect refresh."
+        dbg "ERROR: Failed to execute KDE Connect refresh."
     fi
 fi
 
