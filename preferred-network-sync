@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bash 
 
 # name of the preferred wifi connection (as in NetworkManager)
 PREFERRED=$1
