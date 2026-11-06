@@ -67,6 +67,33 @@ show_network_popup() {
     fi
 }
 
+start_loading_popup() {
+    local MSG="$1"
+    if [ "$USE_YAD" = true ]; then
+        yad --progress \
+            --title="Preferred network script" \
+            --window-icon="network-wireless" \
+            --text='<span font="Sans Bold 15" foreground="#2196F3">Connecting...</span>\n\n<span font="Sans 12">'"$MSG"'</span>' \
+            --text-align=center \
+            --pulsate \
+            --timeout=30 \
+            --width=450 \
+            --height=100 \
+            --no-buttons \
+            --fixed \
+            --percentage=100
+            --center &
+    else
+        zenity --progress \
+            --title="Network" \
+            --text="Connecting to $MSG..." \
+            --pulsate \
+            --no-cancel \
+            --timeout=30 \
+            --width=350 &
+    fi
+}
+
 #RUN KDE RESET LOGIC IF THE FLAG WAS FOUND
 
 if [ "$RUN_KDE" = true ]; then
@@ -94,9 +121,24 @@ if ! nmcli -g NAME con show --active | grep -Fxq "$PREFERRED"; then
     if nmcli -g SSID device wifi list | grep -Fxq "$PREFERRED"; then
         
         dbg "$PREFERRED is available. Attempting to connect..."
-        
+
+        REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
+
+        LOADING_PID=""
+        if [ -n "$REAL_USER" ]; then
+            start_loading_popup "$PREFERRED"    #----loading animation
+            LOADING_PID=$!
+        fi    
+
         # 3. ATTEMPT TO CONNECT
         if nmcli c u "$PREFERRED"; then
+
+            if [ -n "$LOADING_PID" ]; then
+                kill "$LOADING_PID" 2>/dev/null || true
+                wait "$LOADING_PID" 2>/dev/null || true
+                sleep 0.15
+            fi
+
             dbg "Connection successful!"
             REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
             if [ -n "$REAL_USER" ]; then 
@@ -106,6 +148,12 @@ if ! nmcli -g NAME con show --active | grep -Fxq "$PREFERRED"; then
             fi
             
         else
+            if [ -n "$LOADING_PID" ]; then
+                kill "$LOADING_PID" 2>/dev/null || true
+                wait "$LOADING_PID" 2>/dev/null || true
+                sleep 0.15
+            fi
+
             dbg "Connection attempt failed for unknown reason."
             REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
             if [ -n "$REAL_USER" ]; then 
