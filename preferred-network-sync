@@ -4,8 +4,24 @@
 PREFERRED=$1
 
 DEBUG=false
-if (( $# > 1 )) && { [ "$2" = '-v' ] || [ "${3:-}" = '-v' ]; }; then
-    DEBUG=true
+for arg in "$@"; do
+    if [ "$arg" = '-v' ]; then
+        DEBUG=true
+    fi
+    # Checks for either '-yad' based on your request
+    if [ "$arg" = '-yad' ] || [ "$arg" = '-yad' ]; then
+        USE_YAD=true
+    fi
+    # Checks for '-kde' to determine if KDE Connect should be refreshed
+    if [ "$arg" = '-kde' ]; then
+        RUN_KDE=true
+    fi
+done
+
+if [ "$USE_YAD" = true ]; then
+    echo "Using YAD for notifications."
+else
+    echo "Using Zenity for notifications."
 fi
 
 dbg() {
@@ -14,7 +30,46 @@ dbg() {
     fi
 }
 
-if (( $# > 1 )) && { [ "$2" = '-kde' ] || [ "${3:-}" = '-kde' ]; }; then
+show_network_popup() {
+    # $1 represents the first argument passed to the function
+    local PREFERRED_NET="$1"
+    local TITLE="$2"
+    local MESSAGE="$3"
+    local TYPE="${4:-info}" # Default dialog type to 'info' if not passed
+
+    if ([ "$USE_YAD" = true ]); then
+
+        local IMAGE="checkbox"
+        if [ "$TYPE" = "error" ]; then IMAGE="dialog-error"; fi
+        if [ "$TYPE" = "warning" ]; then IMAGE="dialog-warning"; fi
+
+        yad --info \
+        --title="Preferred network script" \
+        --image="$IMAGE" \
+        --window-icon="network-wireless" \
+        --text='<span font="Sans Bold 15" foreground="#2196F3">'$TITLE'</span>\n\n<span font="Sans 12">'"$MESSAGE"'<b>'"$PREFERRED_NET"'</b></span>' \
+        --text-align=center \
+        --no-buttons \
+        --timeout=2 \
+        --width=450 \
+        --height=120 \
+        --fixed \
+        --center
+
+    else
+        if [ "$TYPE" = "error" ]; then
+            zenity --error --title="$TITLE" --text="$MESSAGE$PREFERRED_NET" --timeout=10
+        elif [ "$TYPE" = "warning" ]; then
+            zenity --warning --title="$TITLE" --text="$MESSAGE$PREFERRED_NET" --timeout=2
+        else
+            zenity --info --icon-name="checkbox" --title="$TITLE" --text="$MESSAGE$PREFERRED_NET" --timeout=2
+        fi
+    fi
+}
+
+#RUN KDE RESET LOGIC IF THE FLAG WAS FOUND
+
+if [ "$RUN_KDE" = true ]; then
     dbg "Killing all kdeconnectd processes..."
 
     if killall kdeconnectd 2>/dev/null; then
@@ -45,7 +100,8 @@ if ! nmcli -g NAME con show --active | grep -Fxq "$PREFERRED"; then
             dbg "Connection successful!"
             REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
             if [ -n "$REAL_USER" ]; then 
-                zenity --info --title="Network" --text="Connected to $PREFERRED" --timeout=1
+                show_network_popup "$PREFERRED" "Network" "Connected successfully to " "info"
+                #zenity --info --icon-name="checkbox" --title="Network" --text="Connected successfully to $PREFERRED" --timeout=2
                 runuser -l "$REAL_USER" -c "kdeconnect-cli --refresh"
             fi
             
@@ -53,7 +109,8 @@ if ! nmcli -g NAME con show --active | grep -Fxq "$PREFERRED"; then
             dbg "Connection attempt failed for unknown reason."
             REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
             if [ -n "$REAL_USER" ]; then 
-                zenity --warning --title="Network" --text="Failed to connect to $PREFERRED" --timeout=10
+                show_network_popup "$PREFERRED" "Network" "Failed to connect to " "error"
+                #zenity --error --title="Network" --text="Failed to connect to $PREFERRED" --timeout=10
             fi
 
         fi
@@ -62,7 +119,8 @@ if ! nmcli -g NAME con show --active | grep -Fxq "$PREFERRED"; then
 
         REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
         if [ -n "$REAL_USER" ]; then 
-            zenity --warning --title="Network" --text="$PREFERRED is not in range" --timeout=2
+            show_network_popup "$PREFERRED" "Network" "The following is not in range: " "warning"
+            #zenity --warning --title="Network" --text="$PREFERRED is not in range" --timeout=2
         fi
 
     fi
@@ -71,7 +129,8 @@ else
 
     REAL_USER=$(who | grep ":0" | head -1 | awk '{print $1}')
     if [ -n "$REAL_USER" ]; then 
-        zenity --warning --title="Network" --text="Already connected to $PREFERRED" --timeout=1
+        show_network_popup "$PREFERRED" "Network" "Already connected to " "info"
+        #zenity --info --icon-name="checkbox" --title="Network" --text="Already connected to $PREFERRED" --timeout=1
     fi
 
 fi
