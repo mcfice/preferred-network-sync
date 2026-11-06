@@ -81,7 +81,7 @@ start_loading_popup() {
             --height=100 \
             --no-buttons \
             --fixed \
-            --percentage=100
+            --percentage=100 \
             --center &
     else
         zenity --progress \
